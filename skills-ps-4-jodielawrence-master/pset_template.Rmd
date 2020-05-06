@@ -1,0 +1,43 @@
+---
+title: "Markdown Headers"
+author: "Yuxi Wu"
+date: "29/03/2020"
+output:
+  html_document:
+    number_sections: yes
+  pdf_document: default
+---
+```{r message=FALSE, warning=FALSE}
+library(tidyverse)
+```
+
+<!-- .Rmd files use  markdown, a text mark up language, to provide formating.--> 
+<!--Text include within these strange arrows are comments and will not show up when you knit-->
+
+**Front matter**
+This submission is my work alone and complies with the 30535 integrity policy.
+
+Add your initials to indicate your agreement: **__**
+
+Add your collaborators: **__**
+
+Late coins used this pset: X. Late coins left: X. 
+<!--Please update. You may use up to two for a given assignment. Note we added 5 late coins for a total of 9 for the quarter.)-->
+
+# Problems
+## You change section heading goes here 
+<!--(Notice the use of two `##` followed by a space. )-->
+
+1. YOUR TEXT ANSWER GOES HERE (Please delete)
+
+```{r}
+# YOUR CODE GOES HERE  (Please delete)
+ggplot(mpg, aes(manufacturer)) + geom_bar()
+```
+
+1. YOUR TEXT ANSWER GOES HERE (Please delete)
+
+```{r}
+# YOUR CODE GOES HERE  (Please delete)
+ggplot(mtcars, aes(factor(cyl), mpg)) + geom_violin(aes(fill=mpg))
+```
