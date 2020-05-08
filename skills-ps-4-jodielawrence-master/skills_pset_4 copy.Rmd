@@ -29,7 +29,7 @@ This submission is my work alone and complies with the 30535 integrity policy.
 
 Add your initials to indicate your agreement: **JL**
 
-Add your collaborators: **Steve Gingold**
+Add your collaborators: **Steve Gingold, TJ Chatto**
 
 Late coins used this pset: X. Late coins left: X. 
 <!--Please update. You may use up to two for a given assignment. Note we added 5 late coins for a total of 9 for the quarter.)-->
@@ -200,7 +200,8 @@ who%>%
 
 ```
 
-1b. The number of country-year pairs explicitly missing TB data were rows that ASK STEVE 
+1b. The number of country-year pairs explicitly missing TB data were rows that had NA values in them. There were 7240 rows prior to complete was put in which means that there are 206 NA values in the data set. 
+
 
 2. The NA values and the zeros are different in this case study. The NA values are explicitly missing data for a country year. The zeros, however, are a different story. The zeros can mean, explicitly, that there are no cases of TB in a country. Or the zeros can be implicit because the country was not collecting data at the time. There might also be zeros because the country was not independent at the time of the data collection, or was going through government issues for a portion of the study, which would explain zeros and missing data. 
 
@@ -326,7 +327,7 @@ avg_delay_dest%>%
 
 2. Add the location of the origin and destination (i.e. the lat and lon) to the flights data frame.
 
-For this data frame to work, I have to join both the lat column and the lon column from the airports data frame to the flights data frame. First, I can condense the data to select only what I need and make it less complicated. 
+For this data frame to work, I have to join both the lat column and the lon column from the airports data frame to the flights data frame. First, I can condense the data to select only what I need and make it less complicated. Then I left joined the destination and the origin to the airports dataframe. I lastly changed the .x  and .y because that is not "good coding."
 
 ```{r}
 airport_ori_dest <- airports%>%
@@ -341,49 +342,65 @@ flights%>%
 ```
 
 
-3. Is each plane is flown by a single airline? How many planes change ownership within the nycflight13 dataset?
+3. To find out the answer to this question, I took the flights data and manipulated it two ways - once to count the number of unique planes and the unique carriers, and secondly, to count the tailnumbers. The data frames are joined together and we can see what tailnumber went with what carrier. I filtered it as count more than 1 to see what tailnumbers had more than 1 flight carrier. There were 3,896 rows when I did that. 
 
 ```{r}
 airlines <- nycflights13::airlines
 planes <- nycflights13::planes
 
+plane_flight <- flights%>%
+  select(carrier, tailnum)%>%
+  count(tailnum, carrier)
+
+airline_one <- flights%>%
+  group_by(tailnum)%>%
+  summarise(n=n())
+
+inner_join(plane_flight, airline_one, by = "tailnum")%>%
+  select(tailnum, carrier, count = n.x)%>%
+  filter(count > 1)%>%
+  arrange(tailnum)
+
 ```
 
 
-4. Question: Is there a relationship between the age of a plane and its delays? (Use the “question, query, result, answer” framework to answer this question. In addition to your written answer, make the plot
-title be a succinct answer.)
+4. To graph the relationship between age of plane and delay, I know that the dataframe for planes and the variable year is specific to the year the plane was built. We can join planes dataframe to the flights data frame with the tailnum variable. I wanted to start by condensing the data frame to what I wanted and then I left joined the data frames. I created a new variable for age to show the year of the date, and the year of the pane age. According to the planes data frame information, year is the year the plane was manufactured so by subtracting this from the flight information we can get an age. 
 
 ```{r}
+?planes
 
+flights2 <- flights%>%
+  left_join(planes, by = "tailnum")%>%
+  select(year = year.x, month, day, dep_delay, tailnum, plane_age = year.y)%>%
+  mutate(age = year - plane_age)%>%
+  filter(!is.na(age))%>%
+  group_by(age)%>%
+  summarise(avg_dep_delay = mean(dep_delay, na.rm = TRUE))%>%
+  filter(age >0)%>%
+  arrange((age))
+
+flights2
+
+ggplot(flights2, mapping = aes(x = age, y = avg_dep_delay))+
+  geom_point()+
+  geom_smooth()
+  
+?geom_point
 
 ```
 
-5. left_join the first 100 rows of flights to weather using year. How many rows are there? How long does it take for the computer to do this join?
+5. There are 2,611,500 observations when I left_join the flights to the weather dataframe after filtering for the first 100 rows. It took the computer a bit longer amount of time because of how big the dataframes both are because it was the weather observation (26115) multiplied by the rows in the flights data frame!
 
 ```{r}
+weather <- nycflights13::weather
 
-
+flights_weather <- flights%>%
+  head(100)%>%
+  left_join(weather, by = "year")
+  
 ```
 
 
-6. Describe the result of (but do not attempt to run!) using left_join to merge flights and weather based on year. Without actually running the code, but using what you know about the datasets and your answer to the previous question, how many rows will there be and how long it will take to run this
-code?
-
-```{r}
-
-
-```
-
-#Additional Questions (Optional)
-1. Recreate the plot from the textbook (12.2) showing change in cases over time using table2 instead of table1.
-
-
-2. In the WHO case study, we claimed that iso2 and iso3 were redundant with country. Confirm this claim.
-
-
-3. Why might a flight to have missing tailnum?
-(Hint: Find a variable that explains ~70% of the problems.)
-
-
+6. I think there will be 336776 * 26115 = 8.79e^9 rows. It will take a decent amount of time. It takes my computer roughly 5 seconds to load any data frame with 1,000 rows. Therefore, if that math stands, it will take 8.79e^9/1000 = 8794905 * 5 = 43,974,526 seconds. 
 
 
