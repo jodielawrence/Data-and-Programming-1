@@ -331,7 +331,7 @@ For this data frame to work, I have to join both the lat column and the lon colu
 ```{r}
 airport_ori_dest <- airports%>%
   select(faa, lat, lon, name)
-#condense data frame to only show what I want
+#condense data frame to only show what I wanted
 
 flights%>%
   select(year:day, origin, dest)%>%
