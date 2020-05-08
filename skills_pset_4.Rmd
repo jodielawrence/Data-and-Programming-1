@@ -1,0 +1,406 @@
+---
+title: "Skills Problem Set 4"
+author: "Jodie Lawrence"
+date: "05/03/2020"
+output:
+  html_document:
+    number_sections: yes
+  pdf_document: default
+---
+```{r message=FALSE, warning=FALSE}
+library(tidyverse)
+library(hexbin)
+library(statar)
+library(binsreg)
+library(scales)
+library(nycflights13)
+# all libraries needed
+```
+
+```{r}
+install.packages("styler")
+```
+
+<!-- .Rmd files use  markdown, a text mark up language, to provide formating.--> 
+<!--Text include within these strange arrows are comments and will not show up when you knit-->
+
+**Front matter**
+This submission is my work alone and complies with the 30535 integrity policy.
+
+Add your initials to indicate your agreement: **JL**
+
+Add your collaborators: **Steve Gingold, TJ Chatto**
+
+Late coins used this pset: X. Late coins left: X. 
+<!--Please update. You may use up to two for a given assignment. Note we added 5 late coins for a total of 9 for the quarter.)-->
+
+# Exercises 
+## 1.1 Tidy data with pivot wider / pivot longer
+<!--(Notice the use of two `##` followed by a space. )-->
+
+```{r}
+who <- who
+#dataframe
+```
+
+1. The representation that is easiest to work with is table 1 because there was nothing that needed to be transformed within the table itself before calculation began. Any of these tables are easy to work with if you can manipulate them to do what you want them to though. In table 1, the information is already tidy. That is why this table is potentially the easiest to work with. We know this because the variables are all in a respective column, the observations are all in rows and each value is in a cell. The hardest table to work with is most likely tables 4a and 4b because you have to pivot longer on both of them before you can join them together. This is the most steps, so therefore the hardest, from an effort perspective.  
+Table 2 is messy because of the "type" column, but with pivot_wider, we can spread out that type column into cases and population before we calculate the rate. Table 4a and 4b need to be put together using pivot longer to create a cases column and the 4b to create a new population column and then the information can be used from there to calculate the rate. To find the rate, we can just add a new column for the cases/population and multiply by 10,000 using mutate. Then lastly, I just selected the values that we are supposed to use for each tibble. 
+
+```{r}
+table1 %>%
+  mutate(rate = cases/population * 10000)%>%
+  select(country, year, rate)
+```
+
+```{r}
+table2
+
+```
+```{r}
+new_t2 <- pivot_wider(table2,names_from = "type",values_from = "count")
+new_t2 %>%
+  mutate(rate = cases / population *10000)%>%
+  select(country, year, rate)
+#new table two with tidy data
+#code credit from powerpoint slides
+```
+
+
+```{r}
+table4a
+#table4a is cases and table 4b is population
+```
+```{r}
+table4b
+```
+
+```{r}
+new_t4a <- table4a%>%
+  pivot_longer(`1999`:`2000`,names_to = "year",values_to = "cases")
+
+new_t4b<- table4b%>%
+  pivot_longer(`1999`:`2000`,names_to = "year",values_to = "population")
+
+left_join(new_t4a, new_t4b)%>%
+  mutate(rate = cases / population *10000)%>%
+  select(country, year, rate)
+#new table 4a + b, with tidy data
+#code credit from powerpoint slides
+```
+
+2. The reason that you would put names_to ad values_to in quotations is because in that dataframe "Stocks," those names for columns do not exist and you are creating them. For this specific dataframe, we are taking the years from 2015 to 2016 and creating two new columns for the year and the return. 
+The data is not perfectly symmetrical because they are rearranging the data and in some cases, some of the data gets lost or looks different to the viewer. With the pivot wider, the columns are by year and the data is condensed into two rows. With pivot longer, we get the same data, but the original column names have gone away and it elongates to four rows of information. The variables change too - from characters to numerics. 
+
+```{r}
+stocks <- tibble(
+year = c(2015, 2015, 2016, 2016),
+half = c( 1, 2, 1, 2),
+return = c(1.88, 0.59, 0.92, 0.17)
+)
+stocks %>%
+pivot_wider(names_from = year, values_from = return) %>%
+pivot_longer(`2015`:`2016`, names_to = "year", values_to = "return")
+
+```
+
+3. The code fails because we need backticks on the years 1999 to 2000. It does not understand what those numbers are without any context. Without backticks on the numbers, R is trying to find those observations, when in reality we are trying to create data. To fix the code, we just need to put backticks on the numbers so that R can interpret the information.  
+
+```{r}
+table4a %>%
+pivot_longer('1999':'2000', names_to = "year", values_to = "cases")
+#added ' backticks to surround years, so no more error message.
+```
+
+4. Pivot_wider fails on this tibble because the data has repeat information. We can see that Phillip Woods is both 45 and 50 and has two different heights as well. The names and the key column do not identify the rows as unique and we come up with a weird tibble. To fix the issue, I decided the easiest way was to delete the extra information. In order to do this, I used the distinct function, which will "retain only unique rows from an input. 
+
+```{r}
+people <- tribble(
+~name, ~key, ~value,
+#-----------------|--------|------
+"Phillip Woods", "age", 45,
+"Phillip Woods", "height", 186,
+"Phillip Woods", "age", 50,
+"Phillip Woods", "height", 185,
+"Jessica Cordero", "age", 37,
+"Jessica Cordero", "height", 156
+)
+people
+#output of original data frame
+```
+
+```{r}
+people%>%
+  pivot_wider(names_from = key, values_from = value)
+#what happens when we try to pivot wider
+
+```
+
+```{r}
+people%>%
+  distinct(name, key, .keep_all = TRUE)%>%
+  pivot_wider(names_from = key, values_from = value)
+
+?distinct
+```
+
+5. For this pivot table, we need to use pivot_longer because each row is actually representing more observations than just one. We have both males and female observations in the columns. The data is messy. The variables that we are working with are male, female, pregnancy and the count for each type. In order to tidy the data, I was able to pivot_longer to create a variable called "sex" for the gender. This gives one unique observation per row. Each row indicates if pregnancy occurred, the gender of the person and the count of how many people for each observation. For the males who did get pregnant, this was an NA term because males cannot get pregnant, so I omitted it using the values_drop_na function because it was not a necessary piece of information. 
+
+```{r}
+preg <- tribble(
+~pregnant, ~male, ~female,
+"yes", NA, 10,
+"no", 20, 12
+)
+
+preg
+#original dataframe
+```
+```{r}
+preg_tidy <- preg %>%
+  pivot_longer(cols = 'male':'female',
+               names_to = "sex", values_to = "count",
+               values_drop_na = TRUE)
+
+?pivot_longer
+
+preg_tidy
+#tidy data frame
+
+```
+
+6. The extra function is used to tell the separate function what to do when there are too many observations. The first of the two tibbles has an additional letter in the data that does not match up with the columns. The fill function is used to tell separate what to do when there is not enough data for the columns. In the second of the two tibbles, there are not enough observations to fill the columns. For the first tibble, there was a warning that R gave me to tell me there was an additional piece of information in row 2. By default, it just dropped the piece of information. For the second tibble, it gave me a warning there was a missing piece of information and it default filled it with NA. There are different options with both fill and extra. For extra, you can: "warn" which will show the default warning and drop added values, "drop" which will drop values without warning, or "merge" to split values. For fill, you can: "warn" which default provides NA values for missing pieces, "right" to fill missing values on the right, or "left" to fill missing values on the left. (Provided by R Documentation, code below)
+
+```{r}
+?separate
+#to look up information on this function
+```
+
+## 1.2 Tidy Case Study
+
+1A. Implicitly missing values means that they are simply not part of the data. To show the implicit missing values, we can use the command complete() because that will fill the missing values that are absent to NA values. 
+
+To check and see if the data was missing values implicitly, I decided to make the data look better in the first place. The columns in the original data were all clearly observation values, not columns. Therefore, pivot_longer can be used to make each column into a unique observation. Then, we drop the NA values to make it easier to check the values. Because country, iso2, and iso3 are all saying the samw thing (country), we can just select one of those variables. I ran nrow command twice to see the difference between missing values in the data. The first time  I did the nrow was just for the who data as it was. This gave me 7240 observations. The second time, I ran the Who data but I used the complete command to run it with country and year so that it will show up as NA values. Then I had 7446 rows. Therefore, there are some countries that do not come up without complete!  
+
+```{r}
+who_tidy <- who%>%
+  pivot_longer(cols = new_sp_m014:newrel_f65, 
+    names_to = "key", 
+    values_to = "cases", 
+    values_drop_na = TRUE
+  )%>%
+  select(country, year, key, cases)
+who_tidy
+#new tidier dataframe to work with!
+
+nrow(who) #7240 rows without complete command
+
+who%>%
+  complete(country, year)%>%
+  nrow() #7446 rows with the complete command
+
+```
+
+1b. The number of country-year pairs explicitly missing TB data were rows that had NA values in them. There were 7240 rows prior to complete was put in which means that there are 206 NA values in the data set. 
+
+
+2. The NA values and the zeros are different in this case study. The NA values are explicitly missing data for a country year. The zeros, however, are a different story. The zeros can mean, explicitly, that there are no cases of TB in a country. Or the zeros can be implicit because the country was not collecting data at the time. There might also be zeros because the country was not independent at the time of the data collection, or was going through government issues for a portion of the study, which would explain zeros and missing data. 
+
+
+3. What that mutate function and step of the tidy process is doing is to create a new column variable name. This name, new_rel, is more consistent with the rest of the data than the old column name was. Because rel stands for relapse, and new stands for new cases, it is important they are seperate with an underscore the way the other data is. If you do not put the mutate step in, then later on there will be more errors and difficulty with inconsistency in the data. The difficulty that will occur is that the next step uses the separate function with the underscore as the indicator of where to separate. Without that underscore separating the new from the relapse, R will not know how to separate it and that will create troubles for the tidy data you are trying to make. 
+
+
+## 4.“To what extent is Tuberculosis associated with a specific sex and has this changed from 1997 onward?” query:
+
+1. The first thing I did was to take the tidy data from the book as my data frame. This is so that it was easier to work with all the data. My data was already semi tidy, but I wanted to complete all the steps. This code is from the R4DS book and also lecture slides. I used the tidiest data frame and I grouped by country, year and sex. Then I condensed it to count each case for each unique year, country, sex combo. 
+
+```{r}
+who_tidy1 <- who %>%
+  pivot_longer(
+    cols = new_sp_m014:newrel_f65, 
+    names_to = "key", 
+    values_to = "cases", 
+    values_drop_na = TRUE
+  ) %>% 
+  mutate(
+    key = stringr::str_replace(key, "newrel", "new_rel")
+  ) %>%
+  separate(key, c("new", "var", "sexage")) %>% 
+  select(-new, -iso2, -iso3) %>% 
+  separate(sexage, c("sex", "age"), sep = 1)
+#code from R4DS book
+who_tidy1
+
+who_tidy2 <- who_tidy1%>%
+  group_by(country, year, sex)%>%
+  summarise(case = sum(cases))
+who_tidy2
+```
+
+2. There are 6,921 rows of observations. It is not clear enough to answer the question that sex and TB are related from 1997 onward. We can hypothesize and make guesses based on what we see in this data frame, but ultimately, we still do not have a clear answer to make a good visualization. 
+
+3. To compute the ratio of male to female patients per year, I used the pivot wider function and then created a new variable. 
+
+```{r}
+who_tidy3 <- who_tidy2%>%
+  pivot_wider(names_from = sex, values_from = case)%>%
+  mutate(mf_ratio = m / f)%>%
+  select(country, year, m, f, mf_ratio)
+who_tidy3
+
+
+```
+4. The reason producing ratios by year, ignoring country is because it seems like by country, the ratio is different. In some countries, it seems more prevalent in women than men. There is a difference by country and by ignoring the country, it just seems like in general, the men get it more than women by at least two times the amount. This data does not really capture the information or the prevalence rate accurately. It also does not answer our main question of how is TB associated with sex and the prevalence from 1997 onward?
+
+result:
+```{r}
+who_tidy4%>%
+  group_by(year)%>%
+  mutate(
+    maletotal = sum(m, na.rm = TRUE),
+    fetotal = sum(f, na.rm = TRUE),
+    ratio_total = (maletotal / fetotal)
+  )%>%
+  summarise(total_ratioyr = sum(ratio_total))
+
+```
+
+5. To make a sophisticated visual for the question “To what extent is Tuberculosis associated with a specific sex and has this changed from 1997 onward?”:
+I started with using the data that made the most sense to me. I started with who_tidy3, which has the ratio of male to female per year by country. I filtered so that the year was 1997 and onward. I united the data so that year country had one year observaton by creating a new varible called country year.
+To answer the question, I decided there were simply too many countries to show a nice visual. What I decided to do to show cases changing over time based on sex, was I started by picking the top six countries with the most cases. This is shown in the data frame "top 5".  I grouped by each country and found the total cases summed for each year after 1997. Those were the countries I picked to use: China, India, South Africa, Indonesia, Bangladesh and Phillipines. 
+
+After I made the data frame for the countries with the most, I knew I had to filter the who_tidy_1997 so that it only was with those countries! This really made the data more accessible to graph. Then, I graphed it by country, using sex to show the comparison over time.
+```{r}
+top_six <- who_tidy_1997%>%
+  group_by(country)%>%
+  summarise(most_cases = sum(totalcases, na.rm = TRUE))%>%
+  arrange(desc(most_cases))%>%
+  head(6)
+top_six
+#data frame to show me the top countries affected by TB cases
+
+who_tidy_1997 <- who_tidy3%>%
+  filter(year >= 1997)%>%
+  mutate(
+    totalcases = (m + f),
+    m2total = (m / totalcases),
+    fe2total = (f / totalcases)
+  )%>%
+  select(country, year, m, f, m2total, fe2total, totalcases)
+#data frame with tidy data with additional ratios and information
+
+top_six_only <- who_tidy_1997%>%
+  filter((country == "China"|country == "India"|country == "South Africa"|country == "Indonesia"|country == "Bangladesh"|country == "Philippines"))%>%
+  pivot_longer(c(`m`, `f`), names_to = "sex", values_to = "cases")%>%
+  select(country, year, sex, cases, totalcases)%>%
+  ggplot()+
+  geom_line(aes(x = year, y = cases, color = sex))+
+  ggtitle("Top Six Countries with TB Cases from 1997 Onward")+
+  facet_wrap(~country, ncol = 3)
+top_six_only
+
+```
+
+6. My data visualization is selecting only the top six countries with the most cases, and it shows that overall, the cases of male were higher than female. Also, over time, there has been a rather large spike in TB cases, which surprises me. Also, these countries are mostly in Asia, some third world countries. In the top three countries, the difference between male and female is pretty drastic and obvious!
+
+# 2 R4DS Chapter 13 Joins part 1
+These questions rely on nycflights13 which includes several tibbles with relational data related to the flights data you have previously encountered.
+
+1. First I simply computed average delay by destination. Then, based on the chart provided in lecture, I know I can join these two dataframes by the commonality of faa and destination. I used inner_join because I wanted to merge the destination with faa and I don't care about keeping either x or y variables in this case.
+
+```{r}
+flights <- nycflights13::flights
+airports <- nycflights13::airports
+?airports
+
+avg_delay_dest <- flights%>%
+  group_by(dest)%>%
+  summarise(delay = mean(arr_delay, na.rm = TRUE))
+
+avg_delay_dest%>%
+  inner_join(airports, by = c(dest = "faa"))%>%
+  ggplot(aes(lon, lat, color = delay)) +
+    borders("state") +
+    geom_point() +
+    coord_quickmap()
+
+```
+
+2. Add the location of the origin and destination (i.e. the lat and lon) to the flights data frame.
+
+For this data frame to work, I have to join both the lat column and the lon column from the airports data frame to the flights data frame. First, I can condense the data to select only what I need and make it less complicated. Then I left joined the destination and the origin to the airports dataframe. I lastly changed the .x  and .y because that is not "good coding."
+
+```{r}
+airport_ori_dest <- airports%>%
+  select(faa, lat, lon, name)
+#condense data frame to only show what I wanted
+
+flights%>%
+  select(year:day, origin, dest)%>%
+  left_join(airport_ori_dest, by = c(dest = "faa"))%>%
+  left_join(airport_ori_dest, by = c(origin = "faa"),
+            suffix = c(".dest", ".origin"))
+```
+
+
+3. To find out the answer to this question, I took the flights data and manipulated it two ways - once to count the number of unique planes and the unique carriers, and secondly, to count the tailnumbers. The data frames are joined together and we can see what tailnumber went with what carrier. I filtered it as count more than 1 to see what tailnumbers had more than 1 flight carrier. There were 3,896 rows when I did that. 
+
+```{r}
+airlines <- nycflights13::airlines
+planes <- nycflights13::planes
+
+plane_flight <- flights%>%
+  select(carrier, tailnum)%>%
+  count(tailnum, carrier)
+
+airline_one <- flights%>%
+  group_by(tailnum)%>%
+  summarise(n=n())
+
+inner_join(plane_flight, airline_one, by = "tailnum")%>%
+  select(tailnum, carrier, count = n.x)%>%
+  filter(count > 1)%>%
+  arrange(tailnum)
+
+```
+
+
+4. To graph the relationship between age of plane and delay, I know that the dataframe for planes and the variable year is specific to the year the plane was built. We can join planes dataframe to the flights data frame with the tailnum variable. I wanted to start by condensing the data frame to what I wanted and then I left joined the data frames. I created a new variable for age to show the year of the date, and the year of the pane age. According to the planes data frame information, year is the year the plane was manufactured so by subtracting this from the flight information we can get an age. 
+
+```{r}
+?planes
+
+flights2 <- flights%>%
+  left_join(planes, by = "tailnum")%>%
+  select(year = year.x, month, day, dep_delay, tailnum, plane_age = year.y)%>%
+  mutate(age = year - plane_age)%>%
+  filter(!is.na(age))%>%
+  group_by(age)%>%
+  summarise(avg_dep_delay = mean(dep_delay, na.rm = TRUE))%>%
+  filter(age >0)%>%
+  arrange((age))
+
+flights2
+
+ggplot(flights2, mapping = aes(x = age, y = avg_dep_delay))+
+  geom_point()+
+  geom_smooth()
+  
+?geom_point
+
+```
+
+5. There are 2,611,500 observations when I left_join the flights to the weather dataframe after filtering for the first 100 rows. It took the computer a bit longer amount of time because of how big the dataframes both are because it was the weather observation (26115) multiplied by the rows in the flights data frame!
+
+```{r}
+weather <- nycflights13::weather
+
+flights_weather <- flights%>%
+  head(100)%>%
+  left_join(weather, by = "year")
+  
+```
+
+
+6. I think there will be 336776 * 26115 = 8.79e^9 rows. It will take a decent amount of time. It takes my computer roughly 5 seconds to load any data frame with 1,000 rows. Therefore, if that math stands, it will take 8.79e^9/1000 = 8794905 * 5 = 43,974,526 seconds. 
+
+
